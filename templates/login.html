@@ -1,0 +1,15 @@
+<br><br><br>
+
+<center>
+<h1> PLEASE LOGIN AS AN ADMIN TO DELETE USERS</h1>
+<form action="http://127.0.0.1:5000/login" method="POST">
+    USER NAME :    <input type="text" name="username" /><br>
+    PASSWORD :        <input type="password" name="password" /><br>    
+    <input type="submit" name="LOGIN" />
+</form>
+
+{% if message %}
+    <h3>INVALID CREDENTIALS</h3>
+{% endif %}
+
+</center>
