@@ -1,0 +1,11 @@
+<!doctype html>
+<title>Fields</title>
+{% for field in jsonList %}
+    <div id="{{field}}" >{{ field["key"] }} {{ field["doc_count"] }}</div>
+  {% endfor %}
+
+<script>
+function myFunction(field){
+    console.log(field);
+}
+</script>

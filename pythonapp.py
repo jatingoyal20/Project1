@@ -141,7 +141,7 @@ def query_page():
         response=s.execute()
         print response.hits.total
 
-    return render_template('500.html' , message = msg)
+    return render_template('fields.html' , message = msg)
 
 
 
