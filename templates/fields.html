@@ -14,11 +14,39 @@
         console.log(fieldh,id);
         var start_date = document.getElementById("sd").value;
         var end_date = document.getElementById("ed").value;
-
-        console.log(fieldh)
+        console.log(fieldh);
+        addfilter(fieldh,id);
         var localUrl = theUrl + "field=" + fieldh + "&startdate=" + start_date + "&enddate=" + end_date + "&value=" + id;
         console.log(localUrl)
         httpGetAsync(localUrl);
+    }
+
+    function addfilter(fieldh,id){
+
+        var start_date = document.getElementById("sd").value;
+        var end_date = document.getElementById("ed").value;
+        var Url = theUrl + "field=" + fieldh + "&startdate=" + start_date + "&enddate=" + end_date + "&value=" + id;
+        var para = document.createElement("p");
+        para.onclick = function(){
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
+                processResponse(xmlHttp.responseText);
+            }
+            else{
+                console.log("Cannot get Request!!!");
+            }            }
+        xmlHttp.open("DELETE", Url, true); // true for asynchronous
+        xmlHttp.send(null);
+        var parent = this.parentNode;
+        parent.removeChild(this);
+        }
+        var toappend = fieldh + ' : ' + id;
+        var node = document.createTextNode(toappend);
+        para.appendChild(node);
+        var element = document.getElementById("id2");
+        element.appendChild(para);
+
     }
 
     function httpGetAsync(Url)
@@ -32,9 +60,9 @@
                 console.log("Cannot get Request!!!");
             }
         }
-    xmlHttp.open("GET", Url, true); // true for asynchronous
-    xmlHttp.send(null);
-}
+        xmlHttp.open("GET", Url, true); // true for asynchronous
+        xmlHttp.send(null);
+    }
 
 function processResponse(responseText){
     console.log(responseText);
@@ -65,7 +93,8 @@ function processResponse(responseText){
   End Date:<br>
   <input type="text" name="enddate" value="2017-01-22T21:22:58"  id="ed">
 </form>
-<div id="id1"></div>
+<div id="id1" align="center"></div>
+<div id="id2" align="right"></div>
 
 </body>
 

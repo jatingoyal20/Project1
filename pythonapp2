@@ -10,6 +10,7 @@ import redis
 
 import json
 
+
 es = Elasticsearch()
 
 # create my flask application
@@ -42,8 +43,7 @@ def remove_filter(field,value):
     session=username+'session'
     fv=str(field)+'+'+str(value)
     a=r.srem(session,fv)
-
-def get_filter(): #from sessionId (via redis)
+def get_filter(fieldName): #from sessionId (via redis)
     username=request.cookies.get("name")
     session=username+'session'
     a=r.smembers(session)
@@ -52,6 +52,9 @@ def get_filter(): #from sessionId (via redis)
     for cur in a:
         kvpair = cur.split('+')
         dis[kvpair[0]].append(kvpair[1])
+    if fieldName in dis:
+        del dis[fieldName]
+    dis["userId"].append(get_id())
     print dis
     return dis
 
@@ -59,14 +62,12 @@ def get_filter(): #from sessionId (via redis)
 def funquery(fieldName,endtime,starttime):
     finalquery = dict()
 
-    print starttime
-    print endtime
     query = dict()
 
     bool = dict()
     must = []
-    print get_filter()
-    for key,value in get_filter().iteritems():
+    print get_filter(fieldName)
+    for key,value in get_filter(fieldName).iteritems():
         bools={}
         should=[]
         for values in value:
@@ -95,6 +96,17 @@ def funquery(fieldName,endtime,starttime):
     finalquery["aggs"] = fieldagg
     return finalquery
 
+def jsonResponse(fieldName,buckets):
+    jsonList = []
+    jsonList.append({"field": fieldName})
+
+    for _pair in buckets:
+        a = dict()
+        a["key"] = _pair["key"]
+        a["doc_count"] = _pair["doc_count"]
+        jsonList.append(a)
+    return jsonList
+
 
 @app.route("/login", methods=['GET', 'POST'])
 @app.route("/", methods=['GET', 'POST'])
@@ -117,13 +129,10 @@ def login():
             msg = True
             return render_template('login.html', message=msg)
 
-
 # Insert the GET parameters
 @app.route('/insert', methods=['GET'])
 def default():
     params = request.args.items()
-    jsonparams = json.dumps(params)
-    print params
     toInsert = dict()
     msg = True
     username = request.cookies.get("name")
@@ -146,8 +155,6 @@ def default():
     # add Timestamp
     toInsert["timestamp"] = (datetime.now().isoformat().split('.'))[0]
 
-    print toInsert
-
     res = es.index(index="app", doc_type='users', body=json.dumps(toInsert))
 
     # to create
@@ -162,6 +169,7 @@ def default():
 def query_page():
     finalFields = get_fields()
     params = request.args.items()
+    params.sort()
     print params
     if(len(params)==0):
         # todo: add 400 for empty cookie
@@ -169,30 +177,39 @@ def query_page():
     else:
         s = Search().using(es)
 
+        #remove_filter('rr', '5')
         if(len(params)==4):
-            add_filter(params[0][1],params[3][1])
-            print "filter"
-            print params[0][1]
-            print params[3][1]
+            add_filter(params[1][1],params[3][1])
 
-        query = funquery(params[0][1],params[1][1],params[2][1])
-        print query
+        query = funquery(params[1][1],params[0][1],params[2][1])
+        print json.dumps(query)
         s.update_from_dict(query).to_dict()
         response = s.execute()
-        jsonList=[]
-        jsonList.append({"field":params[0][1]})
-        #jsonList.append({"field":params[0][1]})
-
-
-
-        for _pair in response.aggregations.fieldagg.buckets:
-            a=dict()
-            a["key"]=_pair["key"]
-            a["doc_count"]=_pair["doc_count"]
-            jsonList.append(a)
-
+        jsonList=jsonResponse(params[1][1], response.aggregations.fieldagg.buckets)
+        print json.dumps(jsonList)
         return json.dumps(jsonList)
 
 
+# Delete the filter
+@app.route('/query', methods=['DELETE'])
+def delete():
+    params = request.args.items()
+    params.sort()
+    print params
+    s = Search().using(es)
+
+    if (len(params) == 4):
+        remove_filter(params[1][1], params[3][1])
+
+    query = funquery(params[1][1], params[0][1], params[2][1])
+    print query
+    print "DEL"
+    s.update_from_dict(query).to_dict()
+    response = s.execute()
+    jsonList = jsonResponse(params[1][1], response.aggregations.fieldagg.buckets)
+    print jsonList
+    return json.dumps(jsonList)
+
+
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True, use_reloader=True)
+    app.run(host='172.16.169.33', port=5000, debug=True, use_reloader=True)
