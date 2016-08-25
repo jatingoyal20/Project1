@@ -4,6 +4,7 @@ from flask import Flask, request, render_template, session, url_for, redirect, m
 from datetime import datetime
 from elasticsearch import *
 from elasticsearch_dsl import *
+from collections import defaultdict
 import json
 import redis
 
@@ -24,58 +25,60 @@ app.secret_key = 'rohitjoseph0808@gmail.com'
 def get_id():  # from cookie
     return request.cookies.get("name")
 
-
-def get_fields():  # from userId (via redis)
-    username = request.cookies.get("name")
-    a = r.smembers(username)
-    a = list(a)
-    print a
-    return a
-
-
 def get_fields(): #from userId (via redis)
-    return [('rr', 4)]
     username=request.cookies.get("name")
     a=r.smembers(username)
     a=list(a)
     return a
 
-def add_filter(filter):
+def add_filter(field,value):
     username=request.cookies.get("name")
     session=username+'session'
-    a=r.sadd(session,filter)
+    fv=str(field)+'+'+str(value)
+    a=r.sadd(session,fv)
+
+def remove_filter(field,value):
+    username=request.cookies.get("name")
+    session=username+'session'
+    fv=str(field)+'+'+str(value)
+    a=r.srem(session,fv)
 
 def get_filter(): #from sessionId (via redis)
     username=request.cookies.get("name")
     session=username+'session'
     a=r.smembers(session)
     a=list(a)
-    return a
-
-def get_start_time():  # from user
-    return "2011-01-22T21:22:58"
-
-
-def get_end_time():  # from user
-    return "2017-01-22T21:22:58"
+    dis = defaultdict(list)
+    for cur in a:
+        kvpair = cur.split('+')
+        dis[kvpair[0]].append(kvpair[1])
+    print dis
+    return dis
 
 
-def funquery(fieldName):
+def funquery(fieldName,endtime,starttime):
     finalquery = dict()
 
+    print starttime
+    print endtime
     query = dict()
 
     bool = dict()
-
     must = []
-    for f in get_filter():
-        must.append({"term": {f[0]: f[1]}});
+    print get_filter()
+    for key,value in get_filter().iteritems():
+        bools={}
+        should=[]
+        for values in value:
+            should.append({"term": {key: values}})
+        bools["should"]=should
+        must.append({"bool":bools})
 
     bool["must"] = must
 
     timestamp = dict()
-    timestamp["gte"] = get_start_time()
-    timestamp["lte"] = get_end_time()
+    timestamp["gte"] = starttime
+    timestamp["lte"] = endtime
 
     range = {"timestamp": timestamp}
     filter = {"range": range}
@@ -159,20 +162,36 @@ def default():
 def query_page():
     finalFields = get_fields()
     params = request.args.items()
+    print params
     if(len(params)==0):
+        # todo: add 400 for empty cookie
         return render_template('fields.html', fields=get_fields())
     else:
         s = Search().using(es)
-        currentfield = params[0][1]
-        query = funquery(currentfield)
+
+        if(len(params)==4):
+            add_filter(params[0][1],params[3][1])
+            print "filter"
+            print params[0][1]
+            print params[3][1]
+
+        query = funquery(params[0][1],params[1][1],params[2][1])
+        print query
         s.update_from_dict(query).to_dict()
         response = s.execute()
         jsonList=[]
-        for _pair in response.aggregations.fieldagg.buckets:
-            jsonList.append(_pair)
-        print jsonList
-        return render_template('keycount.html', jsonList=jsonList)
+        jsonList.append({"field":params[0][1]})
+        #jsonList.append({"field":params[0][1]})
 
+
+
+        for _pair in response.aggregations.fieldagg.buckets:
+            a=dict()
+            a["key"]=_pair["key"]
+            a["doc_count"]=_pair["doc_count"]
+            jsonList.append(a)
+
+        return json.dumps(jsonList)
 
 
 if __name__ == '__main__':
