@@ -1,11 +1,72 @@
 <!doctype html>
-<title>Fields</title>
-{% for field in fields %}
-    <div id="{{field}}" onclick="myFunction('{{field}}')">{{ field }}</div>
-  {% endfor %}
-
+<html><head>
+   <title>Fields</title>
 <script>
-function myFunction(field){
-    console.log(field);
+    var theUrl = "http://127.0.0.1:5000/query?";
+    function myFunction(field){
+        var start_date = document.getElementById("sd").value;
+        var end_date = document.getElementById("ed").value;
+        var localUrl = theUrl + "field=" + field + "&startdate=" + start_date + "&enddate=" + end_date;
+        httpGetAsync(localUrl);
+    }
+
+    function myFunction2(fieldh,id){
+        console.log(fieldh,id);
+        var start_date = document.getElementById("sd").value;
+        var end_date = document.getElementById("ed").value;
+
+        console.log(fieldh)
+        var localUrl = theUrl + "field=" + fieldh + "&startdate=" + start_date + "&enddate=" + end_date + "&value=" + id;
+        console.log(localUrl)
+        httpGetAsync(localUrl);
+    }
+
+    function httpGetAsync(Url)
+    {
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
+                processResponse(xmlHttp.responseText);
+            }
+            else{
+                console.log("Cannot get Request!!!");
+            }
+        }
+    xmlHttp.open("GET", Url, true); // true for asynchronous
+    xmlHttp.send(null);
 }
+
+function processResponse(responseText){
+    console.log(responseText);
+    var arr = JSON.parse(responseText);
+    var out = "";
+    var i;
+    var fieldh = arr[0].field;
+    console.log(fieldh)
+    for(i = 1; i < arr.length; i++) {
+        out += '<p id="'+arr[i].key+'" onclick=\'myFunction2("'+fieldh+'", '+arr[i].key+')\'>' + arr[i].key +"    count : " + arr[i].doc_count + '</p>';
+        //out += "<p id="'+ arr[i] + '"'+'onclick="'+'myFunction2("'+ fieldh + '",' + arr[i].key+')' + '">' + arr[i].key +"    count : " + arr[i].doc_count + '</p>";
+    }
+    document.getElementById("id1").innerHTML = out;
+}
+
 </script>
+
+</head>
+
+<body>
+{% for field in fields %}
+<div id="{{field}}" onclick="myFunction('{{field}}')">{{ field }}</div>
+{% endfor %}
+<form id="form1">
+  Start Date:<br>
+  <input type="text" name="startdate" value="2011-01-22T21:22:58"  id="sd">
+  <br>
+  End Date:<br>
+  <input type="text" name="enddate" value="2017-01-22T21:22:58"  id="ed">
+</form>
+<div id="id1"></div>
+
+</body>
+
+</html>
