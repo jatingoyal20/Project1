@@ -2,50 +2,85 @@
 <html><head>
    <title>Fields</title>
 <script>
-    var theUrl = "http://127.0.0.1:5000/query?";
+    var theUrl = "/query?";
+    var myset = {};
+    var selectedField = "";
     function myFunction(field){
+        selectedField = field;
         var start_date = document.getElementById("sd").value;
         var end_date = document.getElementById("ed").value;
-        var localUrl = theUrl + "field=" + field + "&startdate=" + start_date + "&enddate=" + end_date;
+        var localUrl = theUrl + "field=" + field + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
         httpGetAsync(localUrl);
+    }
+
+    function genUrl(){
+        var url = "";
+        var cnt = 0;
+        for (var key in myset){
+            if(myset.hasOwnProperty(key)){
+                for (var value in myset[key]){
+                    if(myset[key].hasOwnProperty(value)){
+                        cnt++;
+                        url+="&vfield" + cnt + "=" + key + "&vvalue" + cnt + "=" + value;
+                    }
+                }
+            }
+        }
+        return url;
     }
 
     function myFunction2(fieldh,id){
         console.log(fieldh,id);
+        if(myset[fieldh]){
+            if(!myset[fieldh][id]){
+                addfilter(fieldh,id);
+            }
+            myset[fieldh][id] = 1;
+        }
+        else{
+            addfilter(fieldh,id);
+            myset[fieldh] = {};
+            myset[fieldh][id] = 1;
+        }
         var start_date = document.getElementById("sd").value;
         var end_date = document.getElementById("ed").value;
         console.log(fieldh);
-        addfilter(fieldh,id);
-        var localUrl = theUrl + "field=" + fieldh + "&startdate=" + start_date + "&enddate=" + end_date + "&value=" + id;
-        console.log(localUrl)
+        var localUrl = theUrl + "field=" + selectedField + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
+        console.log(localUrl);
         httpGetAsync(localUrl);
     }
 
     function addfilter(fieldh,id){
-
         var start_date = document.getElementById("sd").value;
         var end_date = document.getElementById("ed").value;
-        var Url = theUrl + "field=" + fieldh + "&startdate=" + start_date + "&enddate=" + end_date + "&value=" + id;
+        console.log(selectedField);
         var para = document.createElement("p");
-        para.onclick = function(){
-            var xmlHttp = new XMLHttpRequest();
-            xmlHttp.onreadystatechange = function() {
-            if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
-                processResponse(xmlHttp.responseText);
-            }
-            else{
-                console.log("Cannot get Request!!!");
-            }            }
-        xmlHttp.open("DELETE", Url, true); // true for asynchronous
-        xmlHttp.send(null);
-        var parent = this.parentNode;
-        parent.removeChild(this);
-        }
-        var toappend = fieldh + ' : ' + id;
-        var node = document.createTextNode(toappend);
-        para.appendChild(node);
-        var element = document.getElementById("id2");
-        element.appendChild(para);
+                para.onclick = function(event){
+                var filterdata = event.target.innerText;
+                var res = filterdata.split(":");
+                delete myset[res[0]][res[1]];
+                var Url = theUrl + "field=" + selectedField + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
+                console.log(Url);
+
+                var xmlHttp = new XMLHttpRequest();
+                xmlHttp.onreadystatechange = function() {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
+                    processResponse(xmlHttp.responseText);
+                }
+                else{
+                    console.log("Cannot get Request!!!");
+                }            }
+                xmlHttp.open("DELETE", Url, true); // true for asynchronous
+                xmlHttp.send(null);
+                var parent = this.parentNode;
+                parent.removeChild(this);
+                }
+
+                var toappend = fieldh + ':' + id;
+                var node = document.createTextNode(toappend);
+                para.appendChild(node);
+                var element = document.getElementById("id2");
+                element.appendChild(para);
 
     }
 
@@ -72,7 +107,7 @@ function processResponse(responseText){
     var fieldh = arr[0].field;
     console.log(fieldh)
     for(i = 1; i < arr.length; i++) {
-        out += '<p id="'+arr[i].key+'" onclick=\'myFunction2("'+fieldh+'", '+arr[i].key+')\'>' + arr[i].key +"    count : " + arr[i].doc_count + '</p>';
+        out += '<p id="'+arr[i].key+'" onclick=\'myFunction2("'+fieldh+'", "'+arr[i].key+'")\'>' + arr[i].key +"    count : " + arr[i].doc_count + '</p>';
         //out += "<p id="'+ arr[i] + '"'+'onclick="'+'myFunction2("'+ fieldh + '",' + arr[i].key+')' + '">' + arr[i].key +"    count : " + arr[i].doc_count + '</p>";
     }
     document.getElementById("id1").innerHTML = out;

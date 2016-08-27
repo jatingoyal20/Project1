@@ -24,34 +24,21 @@ app.secret_key = 'rohitjoseph0808@gmail.com'
 
 
 def get_id():  # from cookie
+    return "admin3"
     return request.cookies.get("name")
 
 def get_fields(): #from userId (via redis)
-    username=request.cookies.get("name")
+    username=get_id()
     a=r.smembers(username)
     a=list(a)
     return a
 
-def add_filter(field,value):
-    username=request.cookies.get("name")
-    session=username+'session'
-    fv=str(field)+'+'+str(value)
-    a=r.sadd(session,fv)
 
-def remove_filter(field,value):
-    username=request.cookies.get("name")
-    session=username+'session'
-    fv=str(field)+'+'+str(value)
-    a=r.srem(session,fv)
-def get_filter(fieldName): #from sessionId (via redis)
-    username=request.cookies.get("name")
-    session=username+'session'
-    a=r.smembers(session)
-    a=list(a)
+def get_filter(fieldName,params): #params list
+    leng=len(params)/2
     dis = defaultdict(list)
-    for cur in a:
-        kvpair = cur.split('+')
-        dis[kvpair[0]].append(kvpair[1])
+    for i in range(0,leng):
+        dis[params[i][1]].append(params[i+leng][1])
     if fieldName in dis:
         del dis[fieldName]
     dis["userId"].append(get_id())
@@ -59,15 +46,15 @@ def get_filter(fieldName): #from sessionId (via redis)
     return dis
 
 
-def funquery(fieldName,endtime,starttime):
+def funquery(fieldName,endtime,starttime,params):
     finalquery = dict()
 
     query = dict()
 
     bool = dict()
     must = []
-    print get_filter(fieldName)
-    for key,value in get_filter(fieldName).iteritems():
+    print get_filter(fieldName,params)
+    for key,value in get_filter(fieldName,params).iteritems():
         bools={}
         should=[]
         for values in value:
@@ -96,7 +83,7 @@ def funquery(fieldName,endtime,starttime):
     finalquery["aggs"] = fieldagg
     return finalquery
 
-def jsonResponse(fieldName,buckets):
+def jsonResponse(fieldName,buckets): #for response on click
     jsonList = []
     jsonList.append({"field": fieldName})
 
@@ -110,7 +97,7 @@ def jsonResponse(fieldName,buckets):
 
 @app.route("/login", methods=['GET', 'POST'])
 @app.route("/", methods=['GET', 'POST'])
-def login():
+def login():#login page
     if request.method == 'GET':
         msg = False
         return render_template('login.html', message=msg)
@@ -120,7 +107,7 @@ def login():
         u = request.form['username']
         p = request.form['password']
 
-        if u == 'admin' and p == 'admin':
+        if u == 'admin3' and p == 'admin':
             response = make_response(redirect('/query'))
             response.set_cookie('name', u)
             return response
@@ -130,12 +117,13 @@ def login():
             return render_template('login.html', message=msg)
 
 # Insert the GET parameters
-@app.route('/insert', methods=['GET'])
+@app.route('/insert', methods=['GET']) #insert page
 def default():
     params = request.args.items()
+    print params
     toInsert = dict()
     msg = True
-    username = request.cookies.get("name")
+    username = get_id()
 
     # testing for correct input from client side
     for cur in params:
@@ -149,8 +137,6 @@ def default():
     for cur in params:
         toInsert[cur[0]] = cur[1]
 
-    # add user id
-    print get_id()
     toInsert["userId"] = get_id()
     # add Timestamp
     toInsert["timestamp"] = (datetime.now().isoformat().split('.'))[0]
@@ -165,23 +151,20 @@ def default():
 
 
 # query GET
-@app.route('/query', methods=['GET'])
+@app.route('/query', methods=['GET','DELETE'])
 def query_page():
     finalFields = get_fields()
+    print finalFields
     params = request.args.items()
-    params.sort()
     print params
+    params.sort()
     if(len(params)==0):
         # todo: add 400 for empty cookie
         return render_template('fields.html', fields=get_fields())
     else:
         s = Search().using(es)
 
-        #remove_filter('rr', '5')
-        if(len(params)==4):
-            add_filter(params[1][1],params[3][1])
-
-        query = funquery(params[1][1],params[0][1],params[2][1])
+        query = funquery(params[1][1],params[0][1],params[2][1],params[3:])
         print json.dumps(query)
         s.update_from_dict(query).to_dict()
         response = s.execute()
@@ -190,26 +173,7 @@ def query_page():
         return json.dumps(jsonList)
 
 
-# Delete the filter
-@app.route('/query', methods=['DELETE'])
-def delete():
-    params = request.args.items()
-    params.sort()
-    print params
-    s = Search().using(es)
-
-    if (len(params) == 4):
-        remove_filter(params[1][1], params[3][1])
-
-    query = funquery(params[1][1], params[0][1], params[2][1])
-    print query
-    print "DEL"
-    s.update_from_dict(query).to_dict()
-    response = s.execute()
-    jsonList = jsonResponse(params[1][1], response.aggregations.fieldagg.buckets)
-    print jsonList
-    return json.dumps(jsonList)
 
 
 if __name__ == '__main__':
-    app.run(host='172.16.169.33', port=5000, debug=True, use_reloader=True)
+    app.run(host='172.16.164.100', port=5000, debug=True, use_reloader=True)

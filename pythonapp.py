@@ -1,7 +1,7 @@
-from collections import defaultdict
+from datetime import datetime
+from elasticsearch import Elasticsearch
+es = Elasticsearch()
 
-a={'rr': ['4']}
-for key,value in a.iteritems():
-    print key
-    for values in value:
-        print values
+
+res = es.search(index="app", doc_type="users",body={"query": {"match_all": {}}})
+print("Got %d Hits:" % res['hits']['total'])
