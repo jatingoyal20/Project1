@@ -1,18 +1,11 @@
 <!doctype html>
 <html><head>
    <title>Fields</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/bootstrap.min.css') }}">
 <script>
     var theUrl = "/query?";
     var myset = {};
     var selectedField = "";
-    function myFunction(field){
-        selectedField = field;
-        var start_date = document.getElementById("sd").value;
-        var end_date = document.getElementById("ed").value;
-        var localUrl = theUrl + "field=" + field + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
-        httpGetAsync(localUrl);
-    }
-
     function genUrl(){
         var url = "";
         var cnt = 0;
@@ -28,10 +21,21 @@
         }
         return url;
     }
+    function getUrl(){
+        var start_date = document.getElementById("sd").value;
+        var end_date = document.getElementById("ed").value;
+        var localUrl = theUrl + "field=" + selectedField + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
+        return localUrl
+    }
+
+    function myFunction(field){
+        selectedField = field;
+        httpGetAsync(getUrl());
+    }
+
 
     function myFunction2(fieldh,id){
-        console.log(fieldh,id);
-        if(myset[fieldh]){
+       if(myset[fieldh]){
             if(!myset[fieldh][id]){
                 addfilter(fieldh,id);
             }
@@ -42,45 +46,37 @@
             myset[fieldh] = {};
             myset[fieldh][id] = 1;
         }
-        var start_date = document.getElementById("sd").value;
-        var end_date = document.getElementById("ed").value;
-        console.log(fieldh);
-        var localUrl = theUrl + "field=" + selectedField + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
-        console.log(localUrl);
-        httpGetAsync(localUrl);
+        httpGetAsync(getUrl());
     }
 
-    function addfilter(fieldh,id){
-        var start_date = document.getElementById("sd").value;
-        var end_date = document.getElementById("ed").value;
-        console.log(selectedField);
-        var para = document.createElement("p");
-                para.onclick = function(event){
-                var filterdata = event.target.innerText;
-                var res = filterdata.split(":");
-                delete myset[res[0]][res[1]];
-                var Url = theUrl + "field=" + selectedField + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
-                console.log(Url);
 
-                var xmlHttp = new XMLHttpRequest();
-                xmlHttp.onreadystatechange = function() {
+    function addfilter(fieldh,id){
+        var para = document.createElement("p");
+        para.onclick = function(event){
+            var filterdata = event.target.innerText;
+            var res = filterdata.split(":");
+            delete myset[res[0]][res[1]];
+
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
                     processResponse(xmlHttp.responseText);
                 }
                 else{
                     console.log("Cannot get Request!!!");
-                }            }
-                xmlHttp.open("DELETE", Url, true); // true for asynchronous
-                xmlHttp.send(null);
-                var parent = this.parentNode;
-                parent.removeChild(this);
                 }
+            }
+            xmlHttp.open("DELETE", getUrl(), true); // true for asynchronous
+            xmlHttp.send(null);
+            var parent = this.parentNode;
+            parent.removeChild(this);
+        }
 
-                var toappend = fieldh + ':' + id;
-                var node = document.createTextNode(toappend);
-                para.appendChild(node);
-                var element = document.getElementById("id2");
-                element.appendChild(para);
+        var toappend = fieldh + ':' + id;
+        var node = document.createTextNode(toappend);
+        para.appendChild(node);
+        var element = document.getElementById("id2");
+        element.appendChild(para);
 
     }
 
@@ -105,10 +101,8 @@ function processResponse(responseText){
     var out = "";
     var i;
     var fieldh = arr[0].field;
-    console.log(fieldh)
     for(i = 1; i < arr.length; i++) {
         out += '<p id="'+arr[i].key+'" onclick=\'myFunction2("'+fieldh+'", "'+arr[i].key+'")\'>' + arr[i].key +"    count : " + arr[i].doc_count + '</p>';
-        //out += "<p id="'+ arr[i] + '"'+'onclick="'+'myFunction2("'+ fieldh + '",' + arr[i].key+')' + '">' + arr[i].key +"    count : " + arr[i].doc_count + '</p>";
     }
     document.getElementById("id1").innerHTML = out;
 }
@@ -118,18 +112,30 @@ function processResponse(responseText){
 </head>
 
 <body>
-{% for field in fields %}
-<div id="{{field}}" onclick="myFunction('{{field}}')">{{ field }}</div>
-{% endfor %}
-<form id="form1">
-  Start Date:<br>
-  <input type="text" name="startdate" value="2011-01-22T21:22:58"  id="sd">
-  <br>
-  End Date:<br>
-  <input type="text" name="enddate" value="2017-01-22T21:22:58"  id="ed">
-</form>
-<div id="id1" align="center"></div>
-<div id="id2" align="right"></div>
+
+<div class="row" style ="padding:10px">
+  <div class="col-lg-4">
+    {% for field in fields %}
+    <div id="{{field}}" onclick="myFunction('{{field}}')">{{ field }}</div>
+    {% endfor %}
+
+  </div>
+
+  <div class="col-lg-4">
+    <div id="id1" align="left"></div>
+  </div>
+
+  <div class="col-lg-4">
+     <form id="form1">
+      Start Date:<br>
+      <input type="text" name="startdate" value="2011-01-22T21:22:58"  id="sd">
+      <br>
+      End Date:<br>
+      <input type="text" name="enddate" value="2017-01-22T21:22:58"  id="ed">
+    </form>
+    <div id="id2" align="left"></div>
+  </div>
+</div>
 
 </body>
 
