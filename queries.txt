@@ -1,0 +1,103 @@
+{
+  "mappings": {
+    "users": {
+      "properties": {
+        "timestamp": {
+          "type":   "date",
+          "format": "yyyy-MM-dd'T'HH:mm:ss"
+        }
+      }
+    }
+  }
+}
+
+
+POST /_aliases
+{
+    "actions": [
+        { "remove": { "index": "previousdayindex", "alias": "current_index" }},
+        { "remove": { "index": "previousSeventhdayindex", "alias": "current_index" }},
+    ]
+}
+
+
+
+{
+    "query": {
+        "bool" : {
+                     "must" : [
+                        {"term" : {"rr" : 4} },
+                        {"term" : {"rr" : 4} }
+                      ]
+                      ,
+                    "filter":{
+                        "range": {  
+                            "timestamp": {
+                                "gte":"2011-08-22T21:22:58", 
+                                "lte":"2017-08-23T00:22:58"
+                            }
+                        }
+        
+                    }   
+                }
+    },
+        "aggs" : { 
+                "popular_colors" : { 
+                    "terms" : { 
+                      "field" : "userId"
+                    }
+                }
+            }
+    
+}
+
+
+{
+    "query": {
+        "terms": {
+          "_routing": [ "user1" ] 
+        },
+        "bool" : {
+                     "must" : [
+                        {"term" : {"rr" : 4} },
+                        {"term" : {"rr" : 4} }
+                      ]
+                      
+                     
+                }
+    },
+        "aggs" : { 
+                "popular_colors" : { 
+                    "terms" : { 
+                      "field" : "userId"
+                    }
+                }
+            }
+    
+}
+
+
+<Response: [<Result(app/users/AVa1o6yQJdwCpOIOMp75): {u'timestamp': u'2016-08-22T21:23:37', u'userId': u'admin', ...}>, <Result(app/users/AVa5tc_zTpO2nB0oGRTp): {u'timestamp': u'2016-08-23T16:21:55', u'userId': u'admin', ...}>, <Result(app/users/AVa5TxdzTpO2nB0oGRTe): {u'timestamp': u'2016-08-23T14:29:43', u'userId': u'admin', ...}>, <Result(app/users/AVa1oxKPJdwCpOIOMp74): {u'timestamp': u'2016-08-22T21:22:58', u'userId': u'admin', ...}>, <Result(app/users/AVa5u36RTpO2nB0oGRTr): {u'timestamp': u'2016-08-23T16:28:07', u'userId': u'admin', ...}>]>
+
+
+curl -XGET 'http://localhost:9200/_search' -d '{
+     “query” : {
+         “match” : { “user_id” : “4” }
+    }
+}'
+
+
+curl -XGET 'http://localhost:9200/_search' -d '{
+         "query" : {
+             "match" : { "user_id" : "4" }
+         }
+     }'
+}'
+
+curl -XGET “http://localhost:9200/_search" -d “{
+     ‘query’ : {
+        ‘match’ : { ‘user_id’ : ‘4’ }
+     }
+}
+
+

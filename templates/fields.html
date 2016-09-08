@@ -3,7 +3,7 @@
    <title>Fields</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/bootstrap.min.css') }}">
 <script>
-    var theUrl = "/query?";
+    var theUrl = "http://172.16.164.100:5000/query?";
     var myset = {};
     var selectedField = "";
     function genUrl(){
@@ -102,7 +102,7 @@ function processResponse(responseText){
     var i;
     var fieldh = arr[0].field;
     for(i = 1; i < arr.length; i++) {
-        out += '<p id="'+arr[i].key+'" onclick=\'myFunction2("'+fieldh+'", "'+arr[i].key+'")\'>' + arr[i].key +"    count : " + arr[i].doc_count + '</p>';
+        out += '<p id="'+arr[i].key+'" onclick=\'myFunction2("'+fieldh+'", "'+arr[i].key+'")\'><span class="key">' + arr[i].key + '</span><span class="value">' + arr[i].doc_count + '</span></p>';
     }
     document.getElementById("id1").innerHTML = out;
 }

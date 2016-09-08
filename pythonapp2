@@ -1,100 +1,18 @@
 #!/usr/bin/env python
 
 from flask import Flask, request, render_template, session, url_for, redirect, make_response
-from datetime import datetime
-from elasticsearch import *
-from elasticsearch_dsl import *
-from collections import defaultdict
-import json
-import redis
-
-import json
-
-
-es = Elasticsearch()
+import myredis
+import elastics
 
 # create my flask application
 app = Flask(__name__)
-
-# connecting to redis server
-r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
-
 # setiing the secret key
 app.secret_key = 'rohitjoseph0808@gmail.com'
-
-
 def get_id():  # from cookie
-    return "admin3"
-    return request.cookies.get("name")
-
-def get_fields(): #from userId (via redis)
-    username=get_id()
-    a=r.smembers(username)
-    a=list(a)
-    return a
-
-
-def get_filter(fieldName,params): #params list
-    leng=len(params)/2
-    dis = defaultdict(list)
-    for i in range(0,leng):
-        dis[params[i][1]].append(params[i+leng][1])
-    if fieldName in dis:
-        del dis[fieldName]
-    dis["userId"].append(get_id())
-    print dis
-    return dis
-
-
-def funquery(fieldName,endtime,starttime,params):
-    finalquery = dict()
-
-    query = dict()
-
-    bool = dict()
-    must = []
-    print get_filter(fieldName,params)
-    for key,value in get_filter(fieldName,params).iteritems():
-        bools={}
-        should=[]
-        for values in value:
-            should.append({"term": {key: values}})
-        bools["should"]=should
-        must.append({"bool":bools})
-
-    bool["must"] = must
-
-    timestamp = dict()
-    timestamp["gte"] = starttime
-    timestamp["lte"] = endtime
-
-    range = {"timestamp": timestamp}
-    filter = {"range": range}
-    bool["filter"] = filter
-
-    query["bool"] = bool
-
-    finalquery["query"] = query
-
-    field = {"field": fieldName}
-    terms = {"terms": field}
-    fieldagg = {"fieldagg": terms}
-
-    finalquery["aggs"] = fieldagg
-    return finalquery
-
-def jsonResponse(fieldName,buckets): #for response on click
-    jsonList = []
-    jsonList.append({"field": fieldName})
-
-    for _pair in buckets:
-        a = dict()
-        a["key"] = _pair["key"]
-        a["doc_count"] = _pair["doc_count"]
-        jsonList.append(a)
-    return jsonList
-
-
+    if(request.cookies.has_key("name")):
+        return request.cookies.get("name")
+    else :
+        return ""
 @app.route("/login", methods=['GET', 'POST'])
 @app.route("/", methods=['GET', 'POST'])
 def login():#login page
@@ -102,7 +20,7 @@ def login():#login page
         msg = False
         return render_template('login.html', message=msg)
 
-    if request.method == 'POST':
+    else:
 
         u = request.form['username']
         p = request.form['password']
@@ -121,59 +39,43 @@ def login():#login page
 def default():
     params = request.args.items()
     print params
-    toInsert = dict()
-    msg = True
-    username = get_id()
+    userName = get_id()
+    if(userName==""):
+        return make_response(redirect('/login'))
 
     # testing for correct input from client side
     for cur in params:
         if cur[0] == "" or cur[1] == "":
-            return render_template('400.html', message=msg)
+            return render_template('400.html')
 
     # insert in redis set
-    for cur in params:
-        a = r.sadd(username, cur[0])
+    myredis.add_list(userName, params)
 
-    for cur in params:
-        toInsert[cur[0]] = cur[1]
-
-    toInsert["userId"] = get_id()
-    # add Timestamp
-    toInsert["timestamp"] = (datetime.now().isoformat().split('.'))[0]
-
-    res = es.index(index="app", doc_type='users', body=json.dumps(toInsert))
-
-    # to create
-    if res['created'] == True:
-        return render_template('register.html', message=msg)
+    #insert in elasticsearch
+    if elastics.insert(userName,params)==True:
+        return render_template('register.html')
     else:
-        return render_template('500.html', message=msg)
+        return render_template('500.html')
 
 
 # query GET
 @app.route('/query', methods=['GET','DELETE'])
 def query_page():
-    finalFields = get_fields()
-    print finalFields
+
     params = request.args.items()
-    print params
     params.sort()
+    userName = get_id()
+    if(userName==""):
+        return make_response(redirect('/login'))
+
+
     if(len(params)==0):
-        # todo: add 400 for empty cookie
-        return render_template('fields.html', fields=get_fields())
+        finalFields = myredis.get_redis(get_id())
+        print finalFields
+        return render_template('newtab.html', fields=finalFields)
     else:
-        s = Search().using(es)
-
-        query = funquery(params[1][1],params[0][1],params[2][1],params[3:])
-        print json.dumps(query)
-        s.update_from_dict(query).to_dict()
-        response = s.execute()
-        jsonList=jsonResponse(params[1][1], response.aggregations.fieldagg.buckets)
-        print json.dumps(jsonList)
-        return json.dumps(jsonList)
-
-
+        return elastics.query(userName,params)
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True, use_reloader=True)
+    app.run(host='172.16.164.100', port=5000, debug=True, use_reloader=True)

@@ -1,8 +1,8 @@
 import random
 
 from collections import defaultdict
-
-totalqueries=100000
+import os
+totalqueries=10
 field_disct=50
 value_disct=50
 field_length=10
@@ -30,9 +30,6 @@ for i in range(0,field_disct):
         vsize = int(random.random() * value_length + 1)  # from (1,value_length)
         list.append(randomfield(vsize))
     fields[field]=list
-
-r = open("bashscript.sh", 'w')
-r.write("#!/bin/bash\n")
 url="curl 'http://172.16.164.100:5000/insert?"
 for i in range(0,totalqueries):
     ct=0
@@ -47,6 +44,6 @@ for i in range(0,totalqueries):
     str=str[:-1]
     if(ct==0):
         continue
-    r.write(url+str+'\'\n')
-r.close()
+    os.system(url+str+'\'\n')
+
 

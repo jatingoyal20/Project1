@@ -1,0 +1,195 @@
+
+<!doctype html>
+<html><head>
+   <title>Fields</title>
+   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/style.css') }}">
+<script>
+    var theUrl = "/query?";
+    var myset = {};
+    var selectedField = "";
+    function genUrl(){
+        var url = "";
+        var cnt = 0;
+        for (var key in myset){
+            if(myset.hasOwnProperty(key)){
+                for (var value in myset[key]){
+                    if(myset[key].hasOwnProperty(value)){
+                        cnt++;
+                        url+="&vfield" + cnt + "=" + key + "&vvalue" + cnt + "=" + value;
+                    }
+                }
+            }
+        }
+        return url;
+    }
+    function getUrl(){
+        var start_date = document.getElementById("sd").value;
+        var end_date = document.getElementById("ed").value;
+        var localUrl = theUrl + "field=" + selectedField + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
+        return localUrl
+    }
+
+    function myFunction(field){
+        if(selectedField!=""){
+              $("#loggly"+selectedField).removeClass("actv");
+        }
+
+        selectedField = field;
+        httpGetAsync(getUrl());
+        $("#loggly"+selectedField).addClass("actv");
+    }
+
+
+    function myFunction2(fieldh,id){
+       if(myset[fieldh]){
+            if(!myset[fieldh][id]){
+                addfilter(fieldh,id);
+            }
+            myset[fieldh][id] = 1;
+        }
+        else{
+            addfilter(fieldh,id);
+            myset[fieldh] = {};
+            myset[fieldh][id] = 1;
+        }
+        httpGetAsync(getUrl());
+    }
+
+
+    function addfilter(fieldh,id){
+        var para = document.createElement("p");
+        para.onclick = function(event){
+            delete myset[fieldh][id];
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
+                    processResponse(xmlHttp.responseText);
+                }
+                else{
+                    console.log("Cannot get Request!!!");
+                }
+            }
+            xmlHttp.open("DELETE", getUrl(), true); // true for asynchronous
+            xmlHttp.send(null);
+            var parent = this.parentNode;
+            parent.removeChild(this);
+        }
+
+        var toappend = fieldh + ':' + id;
+        para.innerHTML=toappend+'<span class="clse">x</span>';
+        var element = document.getElementById("id2");
+        element.appendChild(para);
+
+    }
+
+    function httpGetAsync(Url)
+    {
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
+                processResponse(xmlHttp.responseText);
+            }
+            else{
+                console.log("Cannot get Request!!!");
+            }
+        }
+        xmlHttp.open("GET", Url, true); // true for asynchronous
+        xmlHttp.send(null);
+    }
+
+function processResponse(responseText){
+    console.log(responseText);
+    var arr = JSON.parse(responseText);
+    var out = "";
+    var i;
+    var fieldh = selectedField ;
+    for(i = 0; i < arr.length; i++) {
+        out += '<p class="secondlist" onclick=\'myFunction2("'+fieldh+'", "'+arr[i].key+'")\'><span class="key">' + arr[i].key + '</span><span class="value">' + arr[i].doc_count + '</span></p>';
+    }
+
+     document.getElementById("id3").innerHTML=out;
+    var $rowsnew = $('.secondlist');
+    console.log($rowsnew)
+    $('#srch').keyup(function() {
+        var val = $.trim($(this).val()).replace(/ +/g, ' ').toLowerCase();
+
+        $rowsnew.show().filter(function() {
+            var text = $(this).text().replace(/\s+/g, ' ').toLowerCase();
+            return !~text.indexOf(val);
+        }).hide();
+    });
+}
+
+</script>
+
+</head>
+
+<body>
+
+<div class="wrapper">
+  <aside class="sidebar">
+        <div class="logo">mnet<span class="blue">Loggly</span></div>
+        <div class="searchform">
+            <input type="search" class="s" id="s" autocomplete="off" data-table="order-table" placeholder="keywords...">
+            <span class="search-icon"></span>
+        </div>
+        <div class="scrollable-list">
+            {% for field in fields %}
+            <div class="firstlist" id=loggly{{field}} + onclick="myFunction('{{field}}')">{{ field }}</div>
+            {% endfor %}
+        </div> 
+  </aside>
+
+<div class="rgt-main">
+
+  <div class="topbar">
+    <form id="form1">
+        <div class="leftdate">
+          <label>Start Date</label>
+          <input type="text" name="startdate" value="2011-01-22T21:22:58"  id="sd">
+        </div>
+        <div class="leftdate">  
+          <label>End Date</label>
+          <input type="text" name="enddate" value="2017-01-22T21:22:58"  id="ed">
+        </div>
+    </form>
+    <div id="id2" align="left">
+    </div>
+  </div>
+
+
+  <div class="table1">
+    <div id="id1" align="left">
+        <div class="searchform">
+            <input type="search"  id="srch" autocomplete="off" data-table="order-table" placeholder="Keywords...">
+            <span class="search-icon2"></span>
+        </div>
+        <header><p class="val"><span>Value</span></p><p class="cnt"><span>Count</span></p></header>
+        <div id="id3" class="table-main">
+        </div>
+    </div>
+  </div>
+
+
+</div>  
+</div>
+
+</body>
+
+<script type="text/javascript">
+var $rows = $('.firstlist');
+$('#s').keyup(function() {
+    var val = $.trim($(this).val()).replace(/ +/g, ' ').toLowerCase();
+    
+    $rows.show().filter(function() {
+        var text = $(this).text().replace(/\s+/g, ' ').toLowerCase();
+        return !~text.indexOf(val);
+    }).hide();
+});
+
+
+</script>
+
+</html>
