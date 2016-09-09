@@ -3,6 +3,8 @@
 <html><head>
    <title>Fields</title>
    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+   <script src="{{ url_for('static', filename='js/jquery-ui.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/jquery-ui.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/style.css') }}">
 <script>
@@ -25,8 +27,8 @@
         return url;
     }
     function getUrl(){
-        var start_date = document.getElementById("sd").value;
-        var end_date = document.getElementById("ed").value;
+        var start_date = document.getElementById("datepicker").value;
+        var end_date = document.getElementById("datepickertwo").value;
         var localUrl = theUrl + "field=" + selectedField + "&startdate=" + start_date + "&enddate=" + end_date + genUrl();
         return localUrl
     }
@@ -145,14 +147,14 @@ function processResponse(responseText){
 <div class="rgt-main">
 
   <div class="topbar">
-    <form id="form1">
+      <form id="form1">
         <div class="leftdate">
           <label>Start Date</label>
-          <input type="text" name="startdate" value="2011-01-22T21:22:58"  id="sd">
+          <input type="text" name="startdate" value="2011-01-22T21:22:58"  id="datepicker">
         </div>
         <div class="leftdate">  
           <label>End Date</label>
-          <input type="text" name="enddate" value="2017-01-22T21:22:58"  id="ed">
+          <input type="text" name="enddate" value="2017-01-22T21:22:58"  id="datepickertwo">
         </div>
     </form>
     <div id="id2" align="left">
@@ -187,6 +189,46 @@ $('#s').keyup(function() {
         var text = $(this).text().replace(/\s+/g, ' ').toLowerCase();
         return !~text.indexOf(val);
     }).hide();
+});
+
+$(function() {
+    $('#datepicker').datepicker({
+        dateFormat: 'yy-dd-mm',
+        onSelect: function(datetext){
+            var d = new Date(); // for now
+            var h = d.getHours();
+                h = (h < 10) ? ("0" + h) : h ;
+
+                var m = d.getMinutes();
+            m = (m < 10) ? ("0" + m) : m ;
+
+            var s = d.getSeconds();
+            s = (s < 10) ? ("0" + s) : s ;
+
+                datetext = datetext + "T" + h + ":" + m + ":" + s;
+            $('#datepicker').val(datetext);
+        },
+    });
+});
+
+$(function() {
+    $('#datepickertwo').datepicker({
+        dateFormat: 'yy-dd-mm',
+        onSelect: function(datetext){
+            var d = new Date(); // for now
+            var h = d.getHours();
+                h = (h < 10) ? ("0" + h) : h ;
+
+                var m = d.getMinutes();
+            m = (m < 10) ? ("0" + m) : m ;
+
+            var s = d.getSeconds();
+            s = (s < 10) ? ("0" + s) : s ;
+
+                datetext = datetext + "T" + h + ":" + m + ":" + s;
+            $('#datepickertwo').val(datetext);
+        },
+    });
 });
 
 
