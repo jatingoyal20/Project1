@@ -3,9 +3,18 @@ from elasticsearch_dsl import *
 from datetime import datetime
 import json
 from collections import defaultdict
+import json
 
-elastic_client='http://172.16.164.100:9200'
+from kafka import KafkaProducer
+
+#kafka ip
+producer = KafkaProducer(bootstrap_servers='10.5.16.75:9092')
+
+#elastic api
+elastic_client='http://10.5.16.75:9200'
 es = Elasticsearch(elastic_client)
+
+
 
 def get_filter(userName,fieldName,params): #params list
     leng=len(params)/2
@@ -15,7 +24,7 @@ def get_filter(userName,fieldName,params): #params list
     if fieldName in dis:
         del dis[fieldName]
     dis["userId"].append(userName)
-    #dis["_routing"].append(get_id())
+    dis["_routing"].append(userName)
     print dis
     return dis
 
@@ -46,7 +55,7 @@ def funquery(userName,fieldName,endtime,starttime,params):
 
     finalquery["query"] = query
 
-    field = {"field": fieldName}
+    field = {"field": fieldName+".raw"}
     terms = {"terms": field}
     fieldagg = {"fieldagg": terms}
 
@@ -72,14 +81,16 @@ def insert(username,params):
     toInsert["userId"] = username
     # add Timestamp
     toInsert["timestamp"] = (datetime.now().isoformat().split('.'))[0]
+
     print json.dumps(toInsert)
 
-    res = es.index(index="app", doc_type='users', body=json.dumps(toInsert))
-    return res['created']
+    producer.send('foobars', json.dumps(toInsert))
+    return True
 
 def query(username,params):
     query = funquery(username,params[1][1], params[0][1], params[2][1], params[3:])
     print json.dumps(query)
-    response = es.search(index="app", body=query)
+    response = es.search(index="lastseven_index", body=query)
     return jsonResponse(response['aggregations']['fieldagg']['buckets'])
+
 

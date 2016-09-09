@@ -9,6 +9,7 @@ app = Flask(__name__)
 # setiing the secret key
 app.secret_key = 'rohitjoseph0808@gmail.com'
 def get_id():  # from cookie
+    return "admin3"
     if(request.cookies.has_key("name")):
         return request.cookies.get("name")
     else :
@@ -78,4 +79,4 @@ def query_page():
 
 
 if __name__ == '__main__':
-    app.run(host='172.16.164.100', port=5000, debug=True, use_reloader=True)
+    app.run(host='10.5.16.75', port=5000, debug=True, use_reloader=True)

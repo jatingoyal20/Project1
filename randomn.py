@@ -2,8 +2,8 @@ import random
 
 from collections import defaultdict
 import os
-totalqueries=10
-field_disct=50
+totalqueries=100000
+field_disct=10
 value_disct=50
 field_length=10
 value_length=10
@@ -30,7 +30,7 @@ for i in range(0,field_disct):
         vsize = int(random.random() * value_length + 1)  # from (1,value_length)
         list.append(randomfield(vsize))
     fields[field]=list
-url="curl 'http://172.16.164.100:5000/insert?"
+url="curl 'http://10.5.16.75:5000/insert?"
 for i in range(0,totalqueries):
     ct=0
     str=""
